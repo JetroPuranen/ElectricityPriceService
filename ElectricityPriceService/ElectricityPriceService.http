@@ -1,0 +1,6 @@
+@ElectricityPriceService_HostAddress = http://localhost:5098
+
+GET {{ElectricityPriceService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
