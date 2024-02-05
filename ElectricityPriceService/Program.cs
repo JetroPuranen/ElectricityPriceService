@@ -64,8 +64,12 @@ public class Startup
 
                     dbContext.SaveChanges();
                 }
-
+               
                 Console.WriteLine($"Data saved to DB");
+
+               
+
+                
             });
         });
 
@@ -89,6 +93,7 @@ public class Startup
     {
         using (var scope = app.ApplicationServices.CreateScope())
         {
+           
             var dbContext = scope.ServiceProvider.GetRequiredService<MyDbContext>();
 
             Console.WriteLine($"All data in database at {DateTime.Now}:");
@@ -96,6 +101,9 @@ public class Startup
             {
                 Console.WriteLine($"ID: {prices.Id}, Price: {prices.Price.ToString("F3")}, StartDate: {prices.StartDate}, EndDate: {prices.EndDate}");
             }
+            //Here we can delete or update data
+            //DataOperations.DeleteRecord(dbContext, 1042);
+            //DataOperations.UpdateRecord(dbContext, 1050, 15.501M);
         }
     }
 }
