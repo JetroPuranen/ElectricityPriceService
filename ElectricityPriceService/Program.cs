@@ -7,12 +7,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using System;
 using System.IO;
-using System.Xml;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Http;
 using System.Linq;
 using System.Threading;
+using ElectricityPriceService.Controllers;
 
 public class Startup
 {
@@ -22,6 +22,7 @@ public class Startup
     {
         services.AddDbContext<MyDbContext>();
         services.AddControllers();
+        services.AddScoped<ElectricityPrices>(); // Lisätty ElectricityPrices palveluihin
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -31,6 +32,36 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();
+
+            endpoints.MapGet("/api/electricityprices", async context =>
+            {
+                // Hae tarvittavat parametrit pyynnöstä
+                var startDateString = context.Request.Query["startDate"];
+                var endDateString = context.Request.Query["endDate"];
+                var pageSizeString = context.Request.Query["pageSize"];
+                var pageString = context.Request.Query["page"];
+
+                //Tarkistetaan parametrien oikeellisuus
+                if (DateTime.TryParse(startDateString, out DateTime startDate) &&
+                    DateTime.TryParse(endDateString, out DateTime endDate) &&
+                    int.TryParse(pageSizeString, out int pageSize) &&
+                    int.TryParse(pageString, out int page))
+                {
+                    
+                    var electricityPrices = context.RequestServices.GetRequiredService<ElectricityPrices>();
+                    var prices = electricityPrices.GetElectricityPricesFromRange(startDate, endDate, pageSize, page);
+
+                    
+                    var responseJson = JsonConvert.SerializeObject(prices);
+                    await context.Response.WriteAsync(responseJson);
+                }
+                else
+                {
+                    // Palauta virhe, jos parametrit eivät ole oikein
+                    context.Response.StatusCode = 400; // Bad Request
+                    await context.Response.WriteAsync("Invalid parameters.");
+                }
+            });
         });
 
         app.Map("/api/saveprices", app =>
@@ -64,16 +95,11 @@ public class Startup
 
                     dbContext.SaveChanges();
                 }
-               
+
                 Console.WriteLine($"Data saved to DB");
-
-               
-
-                
             });
         });
 
-       
         _timer = new Timer(state => DisplayDatabaseInfo(app), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
     }
 
@@ -93,7 +119,7 @@ public class Startup
     {
         using (var scope = app.ApplicationServices.CreateScope())
         {
-           
+
             var dbContext = scope.ServiceProvider.GetRequiredService<MyDbContext>();
 
             Console.WriteLine($"All data in database at {DateTime.Now}:");
